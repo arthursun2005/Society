@@ -16,7 +16,7 @@
 #include <random>
 #include <cmath>
 
-#include "genome.h"
+#include "brain.h"
 
 #define diameter_limit 2.0f
 
@@ -29,6 +29,8 @@
 #define hash_origin 0x1p32f
 
 #define hash_half_bits 32
+
+#define restitution 0.2f
 
 struct vec2 {
     float x;
@@ -80,11 +82,13 @@ enum obj_type {
 struct obj {
     obj_type type;
     vec2 position;
+    vec2 velocity;
+    float radius;
+    float density;
     color color;
 };
 
 struct item : obj {
-    float radius;
     bool fixed;
     
     item() {

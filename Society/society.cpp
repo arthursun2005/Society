@@ -9,6 +9,8 @@
 #include "society.h"
 
 void society::step(float dt) {
+    
+    
     for(proxy* p : set.proxies) {
         p->hash = p->obj->position.hash();
     }
@@ -43,7 +45,33 @@ void society::step(float dt) {
         
         ++i;
     }
+    
+    for(creature* q : C) {
+        q->position += dt * q->velocity;
+    }
+    
+    for(item* q : I) {
+        q->position += dt * q->velocity;
+    }
 }
 
 void society::solve(obj *a, obj *b) {
+    vec2 d = b->position - a->position;
+    float l = dot(d, d);
+    float radius = a->radius + b->radius;
+    if(l < radius * radius) {
+        float w = sqrtf(l);
+        d /= w;
+        float m1 = a->radius * a->radius * a->density;
+        float m2 = b->radius * b->radius * b->density;
+        float q = dot(a->velocity - b->velocity, d);
+        if(q > 0.0f) {
+            vec2 impulse = (1.0f + restitution) * q * m1 * m2 / (m1 + m2) * d;
+            a->velocity -= impulse / m1;
+            b->velocity += impulse / m2;
+        }
+        float f = 0.5f * (radius - w);
+        a->position -= f * d;
+        b->position += f * d;
+    }
 }

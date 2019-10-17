@@ -12,9 +12,9 @@
 struct creature : obj {
     std::string str;
     std::string name;
-    ne_genome genome;
+    ne_brain brain;
     
-    creature() : genome(genome_input_size, genome_output_size) {
+    creature() : brain(genome_input_size, genome_output_size) {
         type = obj_creature;
         
         color.r = ne_random(0.0f, 1.0f);
