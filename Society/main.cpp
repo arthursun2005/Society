@@ -42,16 +42,21 @@ int screen_height = 2 * height;
 
 int character_width, character_height;
 
+int lines;
+
 frame frame;
 
 bool paused = false;
 
-GLuint vaos[2];
-GLuint vbos[4];
+GLuint vaos[3];
+GLuint vbos[5];
 
-gl_program programs[3];
+gl_program programs[4];
 
 gl_texture2d characters;
+
+obj* d_obj = nullptr;
+obj* obj = d_obj;
 
 std::string random_name() {
     size_t size = ne_random(3, 12);
@@ -135,6 +140,12 @@ void initialize() {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
     glEnableVertexAttribArray(0);
     
+    glBindVertexArray(vaos[2]);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[4]);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glEnableVertexAttribArray(0);
+    
     glBindVertexArray(0);
     
     generate_text_texture("characters");
@@ -142,6 +153,7 @@ void initialize() {
     programs[0].initialize("common.glsl", "shape.vs", "color.fs");
     programs[1].initialize("common.glsl", "pass.vs", "text.fs");
     programs[2].initialize("common.glsl", "pass.vs", "fill.fs");
+    programs[3].initialize("common.glsl", "point.vs", "fill.fs");
     
     creature* c = new creature();
     c->position = vec2(0.0f, 0.0f);
@@ -242,6 +254,12 @@ void load() {
     
     glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(decltype(buf)::value_type) * buf.size(), buf.data(), GL_STREAM_DRAW);
+    
+    lines = 0;
+    buf.clear();
+    
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[4]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(decltype(buf)::value_type) * buf.size(), buf.data(), GL_STREAM_DRAW);
 }
 
 void render() {
@@ -255,7 +273,16 @@ void render() {
     glViewport(0, 0, screen_width, screen_height);
     glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, roundness, (int)(society.C.size() + society.I.size()));
     
-    if(frame.scl > scl_limit * 0.25f) {
+    programs[3].bind();
+    programs[3].uniform2f("scl", frame.scl/(float)screen_width, frame.scl/screen_height);
+    programs[3].uniform2f("offset", frame.offset.x, frame.offset.y);
+    programs[3].uniform3f("color", 0.0f, 1.0f, 1.0f);
+    
+    glBindVertexArray(vaos[2]);
+    glViewport(0, 0, screen_width, screen_height);
+    glDrawArrays(GL_LINES, 0, lines);;
+    
+    if(frame.scl > scl_limit * 0.5f) {
         float tw = 0.2f;
         for(creature* q : society.C) {
             draw_string(q->name, q->position + vec2(-(float)q->name.size() * tw, q->radius + tw), tw * frame.scl, tw * frame.scl);
@@ -290,14 +317,16 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
         
         if(key == GLFW_KEY_C) {
-            for(int i = 0; i != 200; ++i) {
-                creature* q = new creature();
-                q->position = mouse() + vec2(i * 2.0f, 0.0f);
-                q->radius = 1.0f;
-                q->density = 1.0f;
-                q->velocity = vec2(0.0f, 0.0f);
-                q->name = random_name();
-                society.add(q);
+            for(int i = 0; i != 20; ++i) {
+                for(int j = 0; j != 20; ++j) {
+                    creature* q = new creature();
+                    q->position = mouse() + vec2(i * 5.0f, j * 5.0f);
+                    q->radius = 1.0f;
+                    q->density = 1.0f;
+                    q->velocity = vec2(0.0f, 0.0f);
+                    q->name = random_name();
+                    society.add(q);
+                }
             }
         }
         

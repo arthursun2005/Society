@@ -8,9 +8,43 @@
 
 #include "society.h"
 
+float raycast(const vec2& p, const vec2& n, const vec2& q, float r) {
+    /**
+     circle: (x - q.x)^2 + (y - q.y)^2 = r^2
+     line: (p.x + n.x * d, p.y + n.y * d) (d <= m)
+     intersection: (p.x + n.x * d - q.x)^2 + (p.y + n.y * d - q.y)^2 = r^2 =
+     p.x * (p.x - 2 * q.x) + 2 * n.x * d * (p.x - q.x) + n.x * d * n.x * d + q.x * q.x + ['.x -> .y']
+     .
+     .
+     .
+     2 * dot(n, p - q) * d + dot(n, n) * d * d = r^2 - dot(q, q) - dot(p, p - 2 * q)
+     quadratic formula ad^2 + bd + c = 0
+     with:
+     a = dot(n, n)
+     b = 2 * dot(n, p - q)
+     c = dot(q, q) + dot(p, p - 2 * q) - r^2
+     take the smallest non-negative (>=0) value of d
+     */
+    float a = dot(n, n);
+    float b = 2.0f * dot(n, p - q);
+    float c = dot(q, q) + dot(p, p - 2.0f * q) - r * r;
+    float e = b * b - 4.0f * a * c;
+    float i = 2.0f * a;
+    float d1 = (-b + sqrtf(e)) / i;
+    float d2 = (-b - sqrtf(e)) / i;
+    
+    if(d1 < 0.0f && d2 < 0.0f) return FLT_MAX;
+    
+    if(d1 < 0.0f) {
+        return d2;
+    }else if(d2 < 0.0f) {
+        return d1;
+    }else{
+        return fminf(d1, d2);
+    }
+}
+
 void society::step(float dt) {
-    
-    
     for(proxy* p : set.proxies) {
         p->hash = p->obj->position.hash();
     }

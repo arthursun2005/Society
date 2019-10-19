@@ -20,19 +20,23 @@
 
 #define diameter_limit 2.0f
 
-#define sight_limit 12.0f
-
 #define genome_new_node_prob 0.01f
 
 #define genome_input_size 2
 
 #define genome_output_size 2
 
-#define hash_origin 0x1p32f
+#define hash_origin 0x1p16f
 
 #define hash_half_bits 32
 
 #define restitution 0.2f
+
+#define sight_limit 12.0f
+
+#define sight_lines 64
+
+#define sight_angle 1.0f
 
 struct vec2 {
     float x;
@@ -45,7 +49,7 @@ struct vec2 {
     vec2(float x, float y) : x(x), y(y) {}
     
     size_t hash() const {
-        return (((size_t)(floorf(y / diameter_limit))) << hash_half_bits) + (size_t)(floorf(x / diameter_limit));
+        return (((size_t)(floorf(y / diameter_limit) + hash_origin)) << hash_half_bits) + (size_t)(floorf(x / diameter_limit) + hash_origin);
     }
 };
 
@@ -98,5 +102,7 @@ struct item : obj {
         type = obj_item;
     }
 };
+
+float raycast(const vec2& p, const vec2& n, const vec2& q, float r);
 
 #endif /* common_h */
