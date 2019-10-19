@@ -9,11 +9,13 @@
 #include "society.h"
 #include "utils.h"
 
+#include <iomanip>
+
 #define scroll_scale 0.001
 
 #define drag_scale 0.9
 
-#define scl_limit 200.0f
+#define scl_limit 400.0f
 
 #define text_texture_width 16
 
@@ -23,8 +25,8 @@ society society;
 
 int roundness = 32;
 
-float dt = 0.016f;
-int rep1 = 1, rep2 = 8, rep3 = 128;
+float dt = 0.033f;
+int rep1 = 1, rep2 = 8, rep3 = 256;
 int rep = rep1;
 float acceleration = 20.0f;
 
@@ -44,9 +46,13 @@ int character_width, character_height;
 
 int lines;
 
+float text_ratio = 0.2f;
+
 frame frame;
 
 bool paused = false;
+
+float current_time = 0.0f;
 
 GLuint vaos[3];
 GLuint vbos[5];
@@ -56,7 +62,13 @@ gl_program programs[4];
 gl_texture2d characters;
 
 obj* d_obj = nullptr;
-obj* obj = d_obj;
+obj* obj;
+
+vec2 mouse() {
+    float k = 1.0f / frame.scl;
+    vec2 mouse((mouseX * 4.0f - screen_width) * k, (mouseY * 4.0f - screen_height) * -k);
+    return mouse - frame.offset;
+}
 
 std::string random_name() {
     size_t size = ne_random(3, 12);
@@ -66,6 +78,30 @@ std::string random_name() {
         q = ne_random('a', 'z');
     }
     return str;
+}
+
+struct obj* mouse_search() {
+    struct obj* g = nullptr;
+    if(mouseX > 0.0 && mouseY > 0.0 && 2.0 * mouseX < screen_width && 2.0 * mouseY < screen_height) {
+        vec2 m = mouse();
+        size_t h1 = m.hash();
+        std::vector<proxy*>::iterator p = std::lower_bound(society.P.begin(), society.P.end(), h1 - hash_y_step - hash_x_step, [] (const proxy* a, size_t b) {
+            return a->hash < b;
+        });
+        std::vector<proxy*>::iterator end = society.P.end();
+        size_t h2 = h1 + hash_y_step + hash_x_step;
+        float b = FLT_MAX;
+        while(p != end && (*p)->hash <= h2) {
+            vec2 q = (*p)->obj->position - m;
+            float d = dot(q, q);
+            if(d < (*p)->obj->radius * (*p)->obj->radius && d < b) {
+                g = (*p)->obj;
+                b = d;
+            }
+            ++p;
+        }
+    }
+    return g;
 }
 
 void generate_text_texture(const char* file) {
@@ -86,17 +122,11 @@ void generate_text_texture(const char* file) {
             pixels[j + (i % character_width) + text_texture_width * character_width * (character_height - 1 - (i / character_width))] = (e == '0' ? 0.0f : 1.0f);
         }
     }
-
+    
     characters.initialize(GL_LINEAR);
     characters.image(GL_R32F, GL_RED, text_texture_width * character_width, text_texture_height * character_height, GL_FLOAT, pixels.data());
     
     characters.bind();
-}
-
-vec2 mouse() {
-    float k = 1.0f / frame.scl;
-    vec2 mouse((mouseX * 4.0f - screen_width) * k, (mouseY * 4.0f - screen_height) * -k);
-    return mouse - frame.offset;
 }
 
 void initialize() {
@@ -154,14 +184,6 @@ void initialize() {
     programs[1].initialize("common.glsl", "pass.vs", "text.fs");
     programs[2].initialize("common.glsl", "pass.vs", "fill.fs");
     programs[3].initialize("common.glsl", "point.vs", "fill.fs");
-    
-    creature* c = new creature();
-    c->position = vec2(0.0f, 0.0f);
-    c->radius = 1.0f;
-    c->density = 1.0f;
-    c->velocity = vec2(0.0f, 0.0f);
-    c->name = "arthur";
-    society.add(c);
 }
 
 void draw_character(char q, int x, int y, int w, int h) {
@@ -216,8 +238,15 @@ void destory() {
 }
 
 void update() {
-    for(int n = 0; n != rep; ++n)
-        society.step(dt);
+    if(!paused) {
+        for(int n = 0; n != rep; ++n)
+            society.step(dt);
+        
+        current_time += rep * dt;
+    }
+    
+    obj = mouse_search();
+    if(obj == nullptr) obj = d_obj;
 }
 
 void load() {
@@ -255,11 +284,27 @@ void load() {
     glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(decltype(buf)::value_type) * buf.size(), buf.data(), GL_STREAM_DRAW);
     
-    lines = 0;
     buf.clear();
+    
+    for(creature* q : society.C) {
+        vec2 n = mul(q->dir, sight_left);
+        ne_node** inputs = q->brain.inputs();
+        for(int i = 0; i != sight_lines; ++i) {
+            buf.push_back(q->position.x);
+            buf.push_back(q->position.y);
+            
+            float s = inputs[1 + 4 * i]->value;
+            
+            buf.push_back(q->position.x + n.x * s);
+            buf.push_back(q->position.y + n.y * s);
+            n = mul(n, sight_step);
+        }
+    }
     
     glBindBuffer(GL_ARRAY_BUFFER, vbos[4]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(decltype(buf)::value_type) * buf.size(), buf.data(), GL_STREAM_DRAW);
+    
+    lines = (int)(buf.size() / 2);
 }
 
 void render() {
@@ -283,8 +328,15 @@ void render() {
     glDrawArrays(GL_LINES, 0, lines);;
     
     if(frame.scl > scl_limit * 0.5f) {
-        float tw = 0.2f;
+        float tw;
+        
         for(creature* q : society.C) {
+            tw = q->radius * text_ratio;
+            draw_string(q->name, q->position + vec2(-(float)q->name.size() * tw, q->radius + tw), tw * frame.scl, tw * frame.scl);
+        }
+        
+        for(item* q : society.I) {
+            tw = q->radius * text_ratio;
             draw_string(q->name, q->position + vec2(-(float)q->name.size() * tw, q->radius + tw), tw * frame.scl, tw * frame.scl);
         }
     }
@@ -296,17 +348,26 @@ void render() {
     glViewport(screen_width, 0, side_width, screen_height);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     
-    int sz = 36;
+    int sz = 28;
     std::stringstream ss;
-    ss << "society\n";
-    ss << "population: " << society.C.size() << '\n';
-    ss << "objects: " << society.I.size() << '\n';
-    ss << "rep: " << rep << '\n';
+    if(obj == nullptr) {
+        ss << "society\n";
+        ss << "population: " << society.C.size() << '\n';
+        ss << "objects: " << society.I.size() << '\n';
+        ss << "rep: " << rep << '\n';
+        ss << std::fixed << std::setprecision(2);
+        ss << "current time: " << current_time << '\n';
+    }else{
+        ss << "name: " << obj->name << '\n';
+        ss << "radius: " << obj->radius << '\n';
+        ss << "density: " << obj->density << '\n';
+    }
     draw_string(ss.str(), screen_width, screen_height - sz, sz, sz);
 }
 
 void mouseCallback(GLFWwindow* window, int button, int action, int mods) {
     if(button == GLFW_MOUSE_BUTTON_LEFT) {
+        d_obj = mouse_search();
     }
 }
 
@@ -317,14 +378,16 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
         
         if(key == GLFW_KEY_C) {
-            for(int i = 0; i != 20; ++i) {
-                for(int j = 0; j != 20; ++j) {
+            int q = 10;
+            for(int i = 1 - q; i != q; ++i) {
+                for(int j = 1 - q; j != q; ++j) {
                     creature* q = new creature();
-                    q->position = mouse() + vec2(i * 5.0f, j * 5.0f);
-                    q->radius = 1.0f;
+                    q->position = mouse() + vec2(i * 3.0f, j * 3.0f);
+                    q->radius = 0.75f;
                     q->density = 1.0f;
                     q->velocity = vec2(0.0f, 0.0f);
                     q->name = random_name();
+                    q->dir = vec2(1.0f, 0.0f);
                     society.add(q);
                 }
             }
@@ -333,10 +396,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         if(key == GLFW_KEY_R) {
             item* q = new item();
             q->position = mouse();
-            q->radius = 0.8f;
-            q->density = 8.0f;
+            q->radius = 1.0f;
+            q->density = 15.0f;
             q->velocity = vec2(0.0f, 0.0f);
             q->color = color(0.7f, 0.7f, 0.7f);
+            q->name = "rock";
             society.add(q);
         }
     }
@@ -403,7 +467,7 @@ int main(int argc, const char * argv[]) {
     frame.scl = scl_limit;
     frame.offset = vec2(0.0f);
     
-    glfwSwapInterval(1);
+    glfwSwapInterval(2);
     
     initialize();
     
@@ -434,8 +498,7 @@ int main(int argc, const char * argv[]) {
             glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
             glClear(GL_COLOR_BUFFER_BIT);
             
-            if(!paused)
-                update();
+            update();
             
             render();
         }

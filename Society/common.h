@@ -22,21 +22,25 @@
 
 #define genome_new_node_prob 0.01f
 
-#define genome_input_size 2
-
-#define genome_output_size 2
-
 #define hash_origin 0x1p16f
 
 #define hash_half_bits 32
 
+#define hash_y_step (1lu << hash_half_bits)
+
+#define hash_x_step 1
+
 #define restitution 0.2f
 
-#define sight_limit 12.0f
+#define sight_limit 2.0f
 
-#define sight_lines 64
+#define sight_lines 256
 
-#define sight_angle 1.0f
+#define sight_half_angle 0.75f
+
+#define genome_input_size (1 + 4 * sight_lines)
+
+#define genome_output_size 5
 
 struct vec2 {
     float x;
@@ -52,6 +56,12 @@ struct vec2 {
         return (((size_t)(floorf(y / diameter_limit) + hash_origin)) << hash_half_bits) + (size_t)(floorf(x / diameter_limit) + hash_origin);
     }
 };
+
+extern vec2 sight_left;
+
+extern float sight_step_angle;
+
+extern vec2 sight_step;
 
 #define make_vec2_operator(o1, o2) \
 inline vec2 operator o1 (const vec2& a, const vec2& b) {return vec2(a.x o1 b.x, a.y o1 b.y);}\
@@ -93,11 +103,10 @@ struct obj {
     float radius;
     float density;
     color color;
+    std::string name;
 };
 
 struct item : obj {
-    bool fixed;
-    
     item() {
         type = obj_item;
     }

@@ -45,7 +45,6 @@
 		8EC746192351420B00CA1CE3 /* society.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = society.h; sourceTree = "<group>"; };
 		8EC7461A23527F1400CA1CE3 /* society.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = society.cpp; sourceTree = "<group>"; };
 		8EC7463723546F0200CA1CE3 /* creature.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = creature.h; sourceTree = "<group>"; };
-		8EC746382354702500CA1CE3 /* proxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = proxy.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,7 +86,6 @@
 				8E9DE68323571A0400BE6D5E /* utils.h */,
 				8EC746192351420B00CA1CE3 /* society.h */,
 				8EC7463723546F0200CA1CE3 /* creature.h */,
-				8EC746382354702500CA1CE3 /* proxy.h */,
 				8E9DE6812355C94500BE6D5E /* items */,
 				8EC74618235141CF00CA1CE3 /* common.h */,
 				8E9DE68223570E4600BE6D5E /* characters */,
