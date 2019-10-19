@@ -27,6 +27,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		8E04818C235A80AC00056EE0 /* fill.fs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = fill.fs; sourceTree = "<group>"; };
 		8E329C48234224F3007066C3 /* Society */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Society; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E329C4B234224F3007066C3 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		8E9DE68223570E4600BE6D5E /* characters */ = {isa = PBXFileReference; lastKnownFileType = text; path = characters; sourceTree = "<group>"; };
@@ -36,9 +37,9 @@
 		8E9DE68923571A4800BE6D5E /* libGLEW.2.1.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGLEW.2.1.0.dylib; path = ../../../../../usr/local/Cellar/glew/2.1.0/lib/libGLEW.2.1.0.dylib; sourceTree = "<group>"; };
 		8E9DE68B2357238500BE6D5E /* shape.vs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = shape.vs; sourceTree = "<group>"; };
 		8E9DE68C2357239900BE6D5E /* common.glsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = common.glsl; sourceTree = "<group>"; };
-		8E9DE68D235723C100BE6D5E /* text.vs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = text.vs; sourceTree = "<group>"; };
+		8E9DE68D235723C100BE6D5E /* pass.vs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = pass.vs; sourceTree = "<group>"; };
 		8E9DE68E2357242200BE6D5E /* text.fs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = text.fs; sourceTree = "<group>"; };
-		8E9DE68F2357242900BE6D5E /* fill.fs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = fill.fs; sourceTree = "<group>"; };
+		8E9DE68F2357242900BE6D5E /* color.fs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = color.fs; sourceTree = "<group>"; };
 		8EC74618235141CF00CA1CE3 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 		8EC746192351420B00CA1CE3 /* society.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = society.h; sourceTree = "<group>"; };
 		8EC7461A23527F1400CA1CE3 /* society.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = society.cpp; sourceTree = "<group>"; };
@@ -90,9 +91,10 @@
 				8EC74618235141CF00CA1CE3 /* common.h */,
 				8E9DE68223570E4600BE6D5E /* characters */,
 				8E9DE68B2357238500BE6D5E /* shape.vs */,
-				8E9DE68D235723C100BE6D5E /* text.vs */,
+				8E9DE68D235723C100BE6D5E /* pass.vs */,
 				8E9DE68E2357242200BE6D5E /* text.fs */,
-				8E9DE68F2357242900BE6D5E /* fill.fs */,
+				8E9DE68F2357242900BE6D5E /* color.fs */,
+				8E04818C235A80AC00056EE0 /* fill.fs */,
 				8E9DE68C2357239900BE6D5E /* common.glsl */,
 			);
 			path = Society;

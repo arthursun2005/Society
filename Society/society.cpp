@@ -23,13 +23,16 @@ void society::step(float dt) {
     std::vector<proxy*>::iterator j;
     std::vector<proxy*>::iterator k = i;
     
+    
+    size_t h1, h2, h3;
+    
     while(i != end) {
-        size_t h1 = (*i)->hash + 1;
-        size_t h2 = (*i)->hash + (1lu << hash_half_bits) - 1;
-        size_t h3 = h2 + 2;
+        h1 = (*i)->hash + 1;
+        h2 = (*i)->hash + (1lu << hash_half_bits) - 1;
+        h3 = h2 + 2;
         
         j = i + 1;
-        while(j != end && (*i)->hash <= h1) {
+        while(j != end && (*j)->hash <= h1) {
             solve((*i)->obj, (*j)->obj);
             ++j;
         }
@@ -41,6 +44,7 @@ void society::step(float dt) {
         j = k;
         while(j != end && (*j)->hash <= h3) {
             solve((*i)->obj, (*j)->obj);
+            ++j;
         }
         
         ++i;
@@ -64,14 +68,15 @@ void society::solve(obj *a, obj *b) {
         d /= w;
         float m1 = a->radius * a->radius * a->density;
         float m2 = b->radius * b->radius * b->density;
+        float inv_sum = 1.0f / (m1 + m2);
         float q = dot(a->velocity - b->velocity, d);
         if(q > 0.0f) {
-            vec2 impulse = (1.0f + restitution) * q * m1 * m2 / (m1 + m2) * d;
+            vec2 impulse = (1.0f + restitution) * q * m1 * m2 * inv_sum * d;
             a->velocity -= impulse / m1;
             b->velocity += impulse / m2;
         }
-        float f = 0.5f * (radius - w);
-        a->position -= f * d;
-        b->position += f * d;
+        float f = inv_sum * (radius - w);
+        a->velocity -= m2 * f * d;
+        b->velocity += m1 * f * d;
     }
 }

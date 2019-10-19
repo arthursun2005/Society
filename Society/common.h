@@ -20,6 +20,8 @@
 
 #define diameter_limit 2.0f
 
+#define sight_limit 12.0f
+
 #define genome_new_node_prob 0.01f
 
 #define genome_input_size 2
@@ -43,7 +45,7 @@ struct vec2 {
     vec2(float x, float y) : x(x), y(y) {}
     
     size_t hash() const {
-        return (((size_t)(floorf(y / diameter_limit) + hash_origin)) << hash_half_bits) | (size_t)(floorf(x / diameter_limit) + hash_origin);
+        return (((size_t)(floorf(y / diameter_limit))) << hash_half_bits) + (size_t)(floorf(x / diameter_limit));
     }
 };
 
@@ -83,6 +85,7 @@ struct obj {
     obj_type type;
     vec2 position;
     vec2 velocity;
+    vec2 dir;
     float radius;
     float density;
     color color;

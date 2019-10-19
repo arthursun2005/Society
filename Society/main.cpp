@@ -13,7 +13,7 @@
 
 #define drag_scale 0.9
 
-#define scl_limit 100.0f
+#define scl_limit 200.0f
 
 #define text_texture_width 16
 
@@ -24,7 +24,8 @@ society society;
 int roundness = 32;
 
 float dt = 0.016f;
-int its = 8;
+int rep1 = 1, rep2 = 8, rep3 = 128;
+int rep = rep1;
 float acceleration = 20.0f;
 
 GLFWwindow *window;
@@ -35,7 +36,8 @@ double dmouseX = mouseX - pmouseX, dmouseY = mouseY - pmouseY;
 int width = 1280;
 int height = 840;
 
-int screen_width = 2 * width;
+int side_width = 750;
+int screen_width = 2 * width - side_width;
 int screen_height = 2 * height;
 
 int character_width, character_height;
@@ -47,7 +49,7 @@ bool paused = false;
 GLuint vaos[2];
 GLuint vbos[4];
 
-gl_program programs[2];
+gl_program programs[3];
 
 gl_texture2d characters;
 
@@ -87,8 +89,8 @@ void generate_text_texture(const char* file) {
 }
 
 vec2 mouse() {
-    float k = 2.0f / frame.scl;
-    vec2 mouse((mouseX * 2.0f - width) * k, (mouseY * 2.0f - height) * -k);
+    float k = 1.0f / frame.scl;
+    vec2 mouse((mouseX * 4.0f - screen_width) * k, (mouseY * 4.0f - screen_height) * -k);
     return mouse - frame.offset;
 }
 
@@ -137,8 +139,9 @@ void initialize() {
     
     generate_text_texture("characters");
     
-    programs[0].initialize("common.glsl", "shape.vs", "fill.fs");
-    programs[1].initialize("common.glsl", "text.vs", "text.fs");
+    programs[0].initialize("common.glsl", "shape.vs", "color.fs");
+    programs[1].initialize("common.glsl", "pass.vs", "text.fs");
+    programs[2].initialize("common.glsl", "pass.vs", "fill.fs");
     
     creature* c = new creature();
     c->position = vec2(0.0f, 0.0f);
@@ -150,6 +153,8 @@ void initialize() {
 }
 
 void draw_character(char q, int x, int y, int w, int h) {
+    if(x < -w || x > 2 * width + w || y < -h || y > 2 * height + h) return;
+    
     int tx = q % text_texture_width;
     int ty = q / text_texture_width;
     
@@ -168,15 +173,21 @@ void draw_character(char q, int x, int y, int w, int h) {
 }
 
 void draw_string(const std::string& str, int x, int y, int w, int h) {
+    int p = x;
     for(char q : str) {
-        draw_character(q, x, y, w, h);
-        x += w;
+        if(q == '\n') {
+            p = x;
+            y -= h;
+        }else{
+            draw_character(q, p, y, w, h);
+            p += w;
+        }
     }
 }
 
 void draw_string(const std::string& str, const vec2& p, int w, int h) {
-    int x = (p.x + frame.offset.x) * frame.scl * 0.5f + width;
-    int y = (p.y + frame.offset.y) * frame.scl * 0.5f + height;
+    int x = (p.x + frame.offset.x) * frame.scl * 0.5f + 0.5f * screen_width;
+    int y = (p.y + frame.offset.y) * frame.scl * 0.5f + 0.5f * screen_height;
     
     for(char q : str) {
         draw_character(q, x, y, w, h);
@@ -193,7 +204,8 @@ void destory() {
 }
 
 void update() {
-    society.step(dt);
+    for(int n = 0; n != rep; ++n)
+        society.step(dt);
 }
 
 void load() {
@@ -243,10 +255,27 @@ void render() {
     glViewport(0, 0, screen_width, screen_height);
     glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, roundness, (int)(society.C.size() + society.I.size()));
     
-    float tw = 0.2f;
-    for(creature* q : society.C) {
-        draw_string(q->name, q->position + vec2(-(float)q->name.size() * tw, q->radius + tw), tw * frame.scl, tw * frame.scl);
+    if(frame.scl > scl_limit * 0.25f) {
+        float tw = 0.2f;
+        for(creature* q : society.C) {
+            draw_string(q->name, q->position + vec2(-(float)q->name.size() * tw, q->radius + tw), tw * frame.scl, tw * frame.scl);
+        }
     }
+    
+    programs[2].bind();
+    programs[2].uniform3f("color", 0.0f, 0.0f, 0.0f);
+    
+    glBindVertexArray(vaos[1]);
+    glViewport(screen_width, 0, side_width, screen_height);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+    int sz = 36;
+    std::stringstream ss;
+    ss << "society\n";
+    ss << "population: " << society.C.size() << '\n';
+    ss << "objects: " << society.I.size() << '\n';
+    ss << "rep: " << rep << '\n';
+    draw_string(ss.str(), screen_width, screen_height - sz, sz, sz);
 }
 
 void mouseCallback(GLFWwindow* window, int button, int action, int mods) {
@@ -260,14 +289,36 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             paused = !paused;
         }
         
-        if(key == GLFW_KEY_A) {
-            creature* c = new creature();
-            c->position = mouse();
-            c->radius = 1.0f;
-            c->density = 1.0f;
-            c->velocity = vec2(0.0f, 0.0f);
-            c->name = random_name();
-            society.add(c);
+        if(key == GLFW_KEY_C) {
+            for(int i = 0; i != 200; ++i) {
+                creature* q = new creature();
+                q->position = mouse() + vec2(i * 2.0f, 0.0f);
+                q->radius = 1.0f;
+                q->density = 1.0f;
+                q->velocity = vec2(0.0f, 0.0f);
+                q->name = random_name();
+                society.add(q);
+            }
+        }
+        
+        if(key == GLFW_KEY_R) {
+            item* q = new item();
+            q->position = mouse();
+            q->radius = 0.8f;
+            q->density = 8.0f;
+            q->velocity = vec2(0.0f, 0.0f);
+            q->color = color(0.7f, 0.7f, 0.7f);
+            society.add(q);
+        }
+    }
+    
+    if(action == GLFW_RELEASE) {
+        if(key == GLFW_KEY_1) {
+            rep = rep1;
+        }else if(key == GLFW_KEY_2) {
+            rep = rep2;
+        }else if(key == GLFW_KEY_3) {
+            rep = rep3;
         }
     }
 }
@@ -281,7 +332,7 @@ void resizeCallback(GLFWwindow* window, int w, int h) {
     width = w;
     height = h;
     
-    screen_width = 2 * width;
+    screen_width = 2 * width - side_width;
     screen_height = 2 * height;
 }
 
