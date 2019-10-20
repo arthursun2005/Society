@@ -11,8 +11,10 @@
 
 #include "../common.h"
 
-struct food : obj {    
-    food() {
+struct food : obj {
+    double age;
+    
+    food() : age(0.0) {
         type = obj_food;
         
         color.r = 1.0;
@@ -26,7 +28,7 @@ struct source : obj {
     double time;
     double rotation;
     
-    source() : time(0.0f) {
+    source() : time(0.0) {
         type = obj_source;
         
         color.r = 1.0;

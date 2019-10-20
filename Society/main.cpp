@@ -80,7 +80,7 @@ struct obj* mouse_search() {
         });
         std::vector<proxy*>::iterator end = society.P.end();
         size_t h2 = h1 + hash_y_step + hash_x_step;
-        double b = FLT_MAX;
+        double b = DBL_MAX;
         while(p != end && (*p)->hash <= h2) {
             vec2 q = (*p)->obj->position - m;
             double d = dot(q, q);
@@ -119,11 +119,12 @@ void generate_text_texture(const char* file) {
 }
 
 void initialize() {
-    std::vector<vec2> vertices(roundness);
+    std::vector<float> vertices(2 * roundness);
     
     for(int i = 0; i != roundness; ++i) {
-        double a = 2.0 * M_PI * i / (double) roundness;
-        vertices[i] = vec2(cosf(a), sinf(a));
+        float a = 2.0f * M_PI * i / (float) roundness;
+        vertices[2 * i] = cosf(a);
+        vertices[2 * i + 1] = sinf(a);
     }
     
     std::vector<float> quad = {
@@ -173,6 +174,17 @@ void initialize() {
     programs[1].initialize("common.glsl", "pass.vs", "text.fs");
     programs[2].initialize("common.glsl", "pass.vs", "fill.fs");
     programs[3].initialize("common.glsl", "point.vs", "fill.fs");
+    
+    for(size_t n = 0; n != 2048; ++n) {
+        wall* q = new wall();
+        q->position = vec2(ne_random(-400.0, 400.0), ne_random(-400.0, 400.0));
+        q->radius = 1.0;
+        q->density = 15.0;
+        q->velocity = vec2(0.0, 0.0);
+        q->name = "rock";
+        q->dir = vec2(1.0, 0.0);
+        society.add(q);
+    }
 }
 
 void draw_character(char q, int x, int y, int w, int h) {
@@ -242,6 +254,8 @@ void update() {
     if(obj == nullptr) obj = d_obj;
 }
 
+size_t population;
+
 void load() {
     std::vector<float> buf;
     
@@ -267,6 +281,8 @@ void load() {
     
     buf.clear();
     
+    population = 0;
+    
     for(struct obj* q : society.O) {
         if(q->type == obj_creature) {
             vec2 n = mul(q->dir, sight_left);
@@ -281,6 +297,7 @@ void load() {
                 buf.push_back(q->position.y + n.y * s);
                 n = mul(n, sight_step);
             }
+            ++population;
         }
     }
     
@@ -308,7 +325,7 @@ void render() {
     
     glBindVertexArray(vaos[2]);
     glViewport(0, 0, screen_width, screen_height);
-    glDrawArrays(GL_LINES, 0, lines);;
+    glDrawArrays(GL_LINES, 0, lines);
     
     if(frame.scl > scl_limit * 0.5) {
         double tw;
@@ -331,9 +348,11 @@ void render() {
     ss << std::fixed << std::setprecision(2);
     if(obj == nullptr) {
         ss << "society\n";
-        ss << "objects: " << society.O.size() << '\n';
+        ss << "objects: " << society.O.size() - population << '\n';
+        ss << "population: " << population << '\n';
         ss << "rep: " << rep << '\n';
         ss << "current time: " << current_time << '\n';
+        ss << "real time: " << glfwGetTime() << '\n';
     }else{
         ss << "name: " << obj->name << '\n';
         ss << "radius: " << obj->radius << '\n';
@@ -342,9 +361,15 @@ void render() {
         ss << "velocity: " << obj->velocity.x << ", " << obj->velocity.y << '\n';
         if(obj->type == obj_creature) {
             ss << "states: " << ((creature*)obj)->states[0] << ", " << ((creature*)obj)->states[1] << '\n';
+            ss << "nodes: " << ((creature*)obj)->brain.nodes.size() << '\n';
+            ss << "links: " << ((creature*)obj)->brain.links.size() << '\n';
+            ss << "age: " << ((creature*)obj)->age << '\n';
         }else if(obj->type == obj_source) {
             ss << "period: " << ((source*)obj)->period << '\n';
             ss << "time: " << ((source*)obj)->time << '\n';
+        }else if(obj->type == obj_food) {
+            ss << "amount: " << obj->radius * obj->radius * obj->density * food_amount << '\n';
+            ss << "age: " << ((food*)obj)->age << '\n';
         }
     }
     draw_string(ss.str(), screen_width, screen_height - sz, sz, sz);
@@ -367,7 +392,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             for(int i = 1 - q; i != q; ++i) {
                 for(int j = 1 - q; j != q; ++j) {
                     creature* q = new creature();
-                    q->position = mouse() + vec2(i * 3.0, j * 3.0);
+                    q->position = mouse() + vec2(i * 20.0, j * 20.0);
                     q->radius = 0.75f;
                     q->density = 1.0;
                     q->velocity = vec2(0.0, 0.0);
@@ -379,28 +404,34 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             }
         }
         
-        if(key == GLFW_KEY_R) {
-            wall* q = new wall();
+        if(key == GLFW_KEY_A) {
+            creature* q = new creature();
             q->position = mouse();
-            q->radius = 1.0;
-            q->density = 15.0;
+            q->radius = 0.75f;
+            q->density = 1.0;
             q->velocity = vec2(0.0, 0.0);
-            q->name = "rock";
+            q->randomlize_name();
             q->dir = vec2(1.0, 0.0);
+            q->randomlize_color();
             society.add(q);
         }
         
         if(key == GLFW_KEY_S) {
-            source* q = new source();
-            q->position = mouse();
-            q->radius = 0.5;
-            q->density = 100.0;
-            q->velocity = vec2(0.0, 0.0);
-            q->name = "source";
-            q->dir = vec2(1.0, 0.0);
-            q->rotation = 1.0;
-            q->period = 3.0;
-            society.add(q);
+            int q = 10;
+            for(int i = 1 - q; i != q; ++i) {
+                for(int j = 1 - q; j != q; ++j) {
+                    source* q = new source();
+                    q->position = mouse() + vec2(i * 40.0, j * 40.0);
+                    q->radius = 0.5;
+                    q->density = 100.0;
+                    q->velocity = vec2(0.0, 0.0);
+                    q->name = "source";
+                    q->dir = vec2(1.0, 0.0);
+                    q->rotation = 1.0;
+                    q->period = 10.0;
+                    society.add(q);
+                }
+            }
         }
     }
     

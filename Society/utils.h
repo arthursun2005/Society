@@ -20,7 +20,7 @@
 #include "common.h"
 
 struct frame {
-    float scl;
+    double scl;
     vec2 offset;
 };
 

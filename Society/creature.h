@@ -18,9 +18,7 @@ struct creature : obj {
     
     creature() : brain(genome_input_size, genome_output_size), age(0.0) {
         type = obj_creature;
-        brain.mutate_add_link();
         brain.flush();
-        
         std::copy_n(initial_states, 2, states);
     }
     

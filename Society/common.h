@@ -50,13 +50,23 @@
 /// creatures' maximum lifespan
 #define creature_lifespan 86400.0
 
-#define inputs_before_sight 3
+#define inputs_before_sight 5
 
 #define genome_input_size (inputs_before_sight + 4 * sight_lines)
 
-#define genome_output_size 5
+#define genome_output_size 6
+
+#define maximum_energy 6000.0
+
+#define minimum_energy 60.0
 
 #define food_amount 120.0
+
+#define food_life 300.0
+
+#define food_left 0.25
+
+#define food_left_amount (food_left * food_left * food_amount)
 
 struct vec2 {
     double x;

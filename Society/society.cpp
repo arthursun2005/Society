@@ -8,13 +8,13 @@
 
 #include "society.h"
 
-vec2 sight_left = vec2(cosf(sight_half_angle), -sinf(sight_half_angle));
+vec2 sight_left = vec2(cos(sight_half_angle), -sin(sight_half_angle));
 
 double sight_step_angle = 2.0 * sight_half_angle / (double) (sight_lines - 1);
 
-vec2 sight_step = vec2(cosf(sight_step_angle), sinf(sight_step_angle));
+vec2 sight_step = vec2(cos(sight_step_angle), sin(sight_step_angle));
 
-double initial_states[2] = {60.0, 90000.0};
+double initial_states[2] = {120.0, 150.0};
 
 double raycast(const vec2& p, const vec2& n, const vec2& q, double r) {
     /**
@@ -38,8 +38,8 @@ double raycast(const vec2& p, const vec2& n, const vec2& q, double r) {
     double b = 2.0 * dot(n, p - q);
     double c = dot(q, q) + dot(p, p - 2.0 * q) - r * r;
     double e = b * b - 4.0 * c;
-    double d1 = (-b + sqrtf(e)) / 2.0;
-    double d2 = (-b - sqrtf(e)) / 2.0;
+    double d1 = (-b + sqrt(e)) / 2.0;
+    double d2 = (-b - sqrt(e)) / 2.0;
     
     if(d1 < 0.0 && d2 < 0.0) return FLT_MAX;
     
@@ -48,7 +48,7 @@ double raycast(const vec2& p, const vec2& n, const vec2& q, double r) {
     }else if(d2 < 0.0) {
         return d1;
     }else{
-        return fminf(d1, d2);
+        return fmin(d1, d2);
     }
 }
 
@@ -62,6 +62,7 @@ void society::step(double dt, void (callback)(obj*)) {
             if((*i)->obj->dead) {
                 callback((*i)->obj);
                 delete (*i)->obj;
+                delete (*i);
                 P.erase(i);
                 continue;
             }
@@ -97,10 +98,10 @@ void society::step(double dt, void (callback)(obj*)) {
             double ey = q->position.y;
             for(int k = 0; k != sight_lines; ++k) {
                 vec2 e = q->position + n * sight_limit;
-                bx = fminf(bx, e.x);
-                ex = fmaxf(ex, e.x);
-                by = fminf(by, e.y);
-                ey = fmaxf(ey, e.y);
+                bx = fmin(bx, e.x);
+                ex = fmax(ex, e.x);
+                by = fmin(by, e.y);
+                ey = fmax(ey, e.y);
                 n = mul(n, sight_step);
             }
             bx -= diameter_limit;
@@ -178,16 +179,28 @@ void society::step(double dt, void (callback)(obj*)) {
             ne_node** outputs = ((creature*)q)->brain.outputs();
             
             inputs[0]->value = 1.0;
-            inputs[1]->value = ((creature*)q)->states[0];
-            inputs[2]->value = ((creature*)q)->states[1];
+            inputs[1]->value = ((creature*)q)->states[0] / maximum_energy - 0.5f;
+            inputs[2]->value = ((creature*)q)->states[1] / maximum_energy - 0.5f;
+            inputs[3]->value = q->velocity.x;
+            inputs[4]->value = q->velocity.y;
             
             ((creature*)q)->brain.activate();
+            
+            if(outputs[5]->value > 0.0) {
+                ((creature*)q)->states[0] -= dt;
+                ((creature*)q)->states[1] += dt;
+                ((creature*)q)->age += dt;
+                if(((creature*)q)->age >= creature_lifespan || ((creature*)q)->states[0] < minimum_energy || ((creature*)q)->states[1] < minimum_energy) {
+                    q->dead = true;
+                }
+                continue;
+            }
             
             vec2 v = creature_acceleration * vec2(outputs[0]->value, outputs[1]->value);
             double v2 = dot(v, v);
             
             if(v2 > creature_acceleration * creature_acceleration)
-                v *= sqrtf(creature_acceleration/v2);
+                v *= sqrt(creature_acceleration/v2);
             
             q->velocity += v * dt;
             
@@ -199,15 +212,15 @@ void society::step(double dt, void (callback)(obj*)) {
                 a = creature_rotation;
             
             a *= dt;
-            q->dir = mul(q->dir, vec2(cosf(a), sinf(a)));
+            q->dir = mul(q->dir, vec2(cos(a), sin(a)));
             
             ((creature*)q)->states[0] -= dt;
             ((creature*)q)->states[1] -= dt;
             ((creature*)q)->age += dt;
-            if(((creature*)q)->age > creature_lifespan || ((creature*)q)->states[0] < 1.0 || ((creature*)q)->states[1] < 1.0) {
+            if(((creature*)q)->age >= creature_lifespan || ((creature*)q)->states[0] < minimum_energy || ((creature*)q)->states[1] < minimum_energy) {
                 q->dead = true;
             }else{
-                if(outputs[4]->value > 0.0) {
+                if(outputs[4]->value > 0.0 && ((creature*)q)->states[0] > 2.0 * minimum_energy && ((creature*)q)->states[1] > 2.0 * minimum_energy) {
                     creature* n = new creature(*(creature*)q);
                     n->position = q->position + 2.0 * q->dir * q->radius;
                     n->radius = q->radius;
@@ -225,16 +238,21 @@ void society::step(double dt, void (callback)(obj*)) {
         }else if(q->type == obj_source) {
             ((source*)q)->time += dt;
             double a = dt * ((source*)q)->rotation;
-            q->dir = mul(q->dir, vec2(cosf(a), sinf(a)));
+            q->dir = mul(q->dir, vec2(cos(a), sin(a)));
             if(((source*)q)->time >= ((source*)q)->period) {
                 food* n = new food();
                 n->position = q->position + 2.0 * q->dir * q->radius;
                 n->radius = q->radius;
                 n->density = 1.0;
-                n->name = "food";
+                n->name = "food from " + q->name;
                 n->velocity = q->dir;
                 new_objs.push_back(n);
                 ((source*)q)->time -= ((source*)q)->period;
+            }
+        }else if(q->type == obj_food) {
+            ((food*)q)->age += dt;
+            if(((food*)q)->age >= food_life) {
+                ((food*)q)->dead = true;
             }
         }
     }
@@ -278,6 +296,19 @@ void society::step(double dt, void (callback)(obj*)) {
         std::vector<obj*>::iterator begin = O.begin();
         while(i-- != begin) {
             if((*i)->dead) {
+                if((*i)->type == obj_creature) {
+                    while(((creature*)*i)->states[0] > food_left_amount) {
+                        ((creature*)*i)->states[0] -= food_left_amount;
+                        food* n = new food();
+                        double a = ne_random(-M_PI, M_PI);
+                        n->position = (*i)->position + (*i)->radius * vec2(cos(a), sin(a));
+                        n->radius = food_left;
+                        n->density = 1.0;
+                        n->name = "leftover from " + (*i)->name;
+                        n->velocity = vec2(cos(a), sin(a));
+                        new_objs.push_back(n);
+                    }
+                }
                 O.erase(i);
                 continue;
             }
@@ -297,7 +328,7 @@ void society::solve(obj *a, obj *b) {
     double l = dot(d, d);
     double radius = a->radius + b->radius;
     if(l < radius * radius) {
-        double w = sqrtf(l);
+        double w = sqrt(l);
         d /= w;
         double m1 = a->radius * a->radius * a->density;
         double m2 = b->radius * b->radius * b->density;
@@ -309,14 +340,20 @@ void society::solve(obj *a, obj *b) {
             b->velocity += impulse / m2;
         }
         
+        double f = inv_sum * (radius - w);
+        a->position -= m2 * f * d;
+        b->position += m1 * f * d;
+        
         if(b->type == obj_food && a->type == obj_creature) {
-            if(((creature*)a)->brain.outputs()[3]->value > 0.0) {
-                ((creature*)a)->states[0] += food_amount;
+            double q = m2 * food_amount;
+            if(((creature*)a)->brain.outputs()[3]->value > 0.0 && ((creature*)a)->brain.outputs()[5]->value <= 0.0 && ((creature*)a)->states[0] + q <= maximum_energy) {
+                ((creature*)a)->states[0] += q;
                 b->dead = true;
             }
         }else if(a->type == obj_food && b->type == obj_creature) {
-            if(((creature*)b)->brain.outputs()[3]->value > 0.0) {
-                ((creature*)b)->states[0] += food_amount;
+            double q = m1 * food_amount;
+            if(((creature*)b)->brain.outputs()[3]->value > 0.0 && ((creature*)b)->brain.outputs()[5]->value <= 0.0 && ((creature*)b)->states[0] + q <= maximum_energy) {
+                ((creature*)b)->states[0] += q;
                 a->dead = true;
             }
         }
