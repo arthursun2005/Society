@@ -31,6 +31,8 @@
 		8E04818D235ABD1C00056EE0 /* point.vs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = point.vs; sourceTree = "<group>"; };
 		8E329C48234224F3007066C3 /* Society */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Society; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E329C4B234224F3007066C3 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		8E599716235C263F00A5C9C1 /* source.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = source.h; sourceTree = "<group>"; };
+		8E599717235C289600A5C9C1 /* wall.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wall.h; sourceTree = "<group>"; };
 		8E9DE68223570E4600BE6D5E /* characters */ = {isa = PBXFileReference; lastKnownFileType = text; path = characters; sourceTree = "<group>"; };
 		8E9DE68323571A0400BE6D5E /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		8E9DE68523571A2C00BE6D5E /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
@@ -103,6 +105,8 @@
 		8E9DE6812355C94500BE6D5E /* items */ = {
 			isa = PBXGroup;
 			children = (
+				8E599716235C263F00A5C9C1 /* source.h */,
+				8E599717235C289600A5C9C1 /* wall.h */,
 			);
 			path = items;
 			sourceTree = "<group>";

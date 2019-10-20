@@ -18,11 +18,12 @@
 
 #include "brain.h"
 
-#define diameter_limit 2.0f
+/// maximum diameter any object can have
+#define diameter_limit 2.0
 
-#define genome_new_node_prob 0.01f
+#define genome_new_node_prob 0.01
 
-#define hash_origin 0x1p16f
+#define hash_origin 0x1p16
 
 #define hash_half_bits 32
 
@@ -30,38 +31,55 @@
 
 #define hash_x_step 1
 
-#define restitution 0.2f
+#define restitution 0.2
 
-#define sight_limit 2.0f
+/// how far a creature can see
+#define sight_limit 32.0
 
-#define sight_lines 256
+/// sight accuracy
+#define sight_lines 8
 
-#define sight_half_angle 0.75f
+#define sight_half_angle 0.5
 
-#define genome_input_size (1 + 4 * sight_lines)
+/// creatures' maximum acceleration
+#define creature_acceleration 8.0
+
+/// creatures' maximum angular velocity
+#define creature_rotation 2.0
+
+/// creatures' maximum lifespan
+#define creature_lifespan 86400.0
+
+#define inputs_before_sight 3
+
+#define genome_input_size (inputs_before_sight + 4 * sight_lines)
 
 #define genome_output_size 5
 
+#define food_amount 120.0
+
 struct vec2 {
-    float x;
-    float y;
+    double x;
+    double y;
     
     vec2() {}
     
-    vec2(float scl) : x(scl), y(scl) {}
+    vec2(double scl) : x(scl), y(scl) {}
     
-    vec2(float x, float y) : x(x), y(y) {}
+    vec2(double x, double y) : x(x), y(y) {}
     
     size_t hash() const {
-        return (((size_t)(floorf(y / diameter_limit) + hash_origin)) << hash_half_bits) + (size_t)(floorf(x / diameter_limit) + hash_origin);
+        return (((size_t)(floor(y / diameter_limit) + hash_origin)) << hash_half_bits) + (size_t)(floor(x / diameter_limit) + hash_origin);
     }
 };
 
 extern vec2 sight_left;
 
-extern float sight_step_angle;
+extern double sight_step_angle;
 
 extern vec2 sight_step;
+
+extern double initial_states[2];
 
 #define make_vec2_operator(o1, o2) \
 inline vec2 operator o1 (const vec2& a, const vec2& b) {return vec2(a.x o1 b.x, a.y o1 b.y);}\
@@ -72,7 +90,7 @@ make_vec2_operator(-, -=)
 make_vec2_operator(*, *=)
 make_vec2_operator(/, /=)
 
-inline float dot(const vec2& a, const vec2& b) {
+inline double dot(const vec2& a, const vec2& b) {
     return a.x * b.x + a.y * b.y;
 }
 
@@ -81,18 +99,20 @@ inline vec2 mul (const vec2& a, const vec2& b) {
 }
 
 struct color {
-    float r;
-    float g;
-    float b;
+    double r;
+    double g;
+    double b;
     
     color() {}
     
-    color(float r, float g, float b) : r(r), g(g), b(b) {}
+    color(double r, double g, double b) : r(r), g(g), b(b) {}
 };
 
 enum obj_type {
-    obj_item,
-    obj_creature
+    obj_creature,
+    obj_wall,
+    obj_food,
+    obj_source
 };
 
 struct obj {
@@ -100,18 +120,29 @@ struct obj {
     vec2 position;
     vec2 velocity;
     vec2 dir;
-    float radius;
-    float density;
+    double radius;
+    double density;
     color color;
     std::string name;
-};
-
-struct item : obj {
-    item() {
-        type = obj_item;
+    bool dead;
+    
+    obj() : dead(false) {}
+    
+    void randomlize_color() {
+        color.r = ne_random(0.0, 1.0);
+        color.g = ne_random(0.0, 1.0);
+        color.b = ne_random(0.0, 1.0);
+    }
+    
+    void randomlize_name() {
+        size_t size = ne_random(3, 12);
+        name.resize(size);
+        for(char& q : name) {
+            q = ne_random('a', 'z');
+        }
     }
 };
 
-float raycast(const vec2& p, const vec2& n, const vec2& q, float r);
+double raycast(const vec2& p, const vec2& n, const vec2& q, double r);
 
 #endif /* common_h */

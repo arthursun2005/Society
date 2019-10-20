@@ -11,6 +11,8 @@
 
 #include "common.h"
 #include "creature.h"
+#include "items/source.h"
+#include "items/wall.h"
 
 struct proxy {
     size_t hash;
@@ -23,13 +25,10 @@ struct sight_segment {
     size_t lower_bound;
     size_t upper_bound;
     creature* q;
-    int i;
 };
 
 struct society {
-    std::vector<creature*> C;
-    
-    std::vector<item*> I;
+    std::vector<obj*> O;
     
     std::vector<proxy*> P;
     std::vector<sight_segment*> S;
@@ -38,29 +37,21 @@ struct society {
         for(proxy* p : P)
             delete p;
         
-        for(creature* q : C)
-            delete q;
-        
-        for(item* q : I)
+        for(obj* q : O)
             delete q;
         
         for(sight_segment* q : S)
             delete q;
     }
     
-    void add(creature* x) {
-        C.push_back(x);
-        P.push_back(new proxy(C.back()));
+    void add(obj* x) {
+        O.push_back(x);
+        P.push_back(new proxy(O.back()));
     }
     
-    void add(item* x) {
-        I.push_back(x);
-        P.push_back(new proxy(I.back()));
-    }
+    void solve(obj* a, obj* b);
     
-    void solve(obj* a, obj* b, float dt);
-    
-    void step(float dt);
+    void step(double dt, void (callback)(obj*));
 };
 
 #endif /* society_h */
